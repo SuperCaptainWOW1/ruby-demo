@@ -1,0 +1,28 @@
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: sans-serif;
+}
+
+body {
+  display: flex;
+}
+
+body > div {
+  width: 50%;
+  position: relative;
+}
+
+h2 {
+  position: absolute;
+  left: 50%;
+  translate: -50%;
+  color: #fff;
+  /* color: #120a36; */
+  margin-top: 24px;
+}
