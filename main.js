@@ -122,6 +122,13 @@ async function startShaderDemo() {
     composer.render();
   }
   renderer.setAnimationLoop(animate);
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / 2 / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth / 2, window.innerHeight);
+  });
 }
 
 async function startSimpleMaterialDemo() {
@@ -181,6 +188,13 @@ async function startSimpleMaterialDemo() {
     renderer.render(scene, camera);
   }
   renderer.setAnimationLoop(animate);
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / 2 / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth / 2, window.innerHeight);
+  });
 }
 
 startShaderDemo();
