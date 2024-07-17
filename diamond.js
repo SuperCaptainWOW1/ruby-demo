@@ -39,14 +39,19 @@ export const makeDiamond = (
       uniforms: {
         envMap: { value: environment },
         bvh: { value: new MeshBVHUniformStruct() },
-        bounces: { value: 3 },
+
+        bounces: { value: 3, min: 0, max: 8, step: 1 },
+        aberrationStrength: { value: 0.0, min: 0, max: 0.1, step: 0.01 },
+        ior: { value: 3.0, min: 0, max: 10 },
+        fresnel: { value: 0.8 },
+
         color: { value: color },
-        ior: { value: ior },
+        // ior: { value: ior },
         correctMips: { value: true },
         projectionMatrixInv: { value: camera.projectionMatrixInverse },
         viewMatrixInv: { value: camera.matrixWorld },
         chromaticAberration: { value: true },
-        aberrationStrength: { value: 0.01 },
+        // aberrationStrength: { value: 0.01 },
         resolution: {
           value: new THREE.Vector2(window.innerWidth, window.innerHeight),
         },
@@ -96,7 +101,7 @@ export const makeDiamond = (
                   float dist = 0.0;
                   bvhIntersectFirstHit( bvh, rayOrigin, rayDirection, faceIndices, faceNormal, barycoord, side, dist );
                   vec3 hitPos = rayOrigin + rayDirection * max(dist - 0.001, 0.0);
-                 // faceNormal *= side;
+                //  faceNormal *= side;
                   vec3 tempDir = refract(rayDirection, faceNormal, ior);
                   if (length(tempDir) != 0.0) {
                       rayDirection = tempDir;
@@ -105,6 +110,7 @@ export const makeDiamond = (
                   rayDirection = reflect(rayDirection, faceNormal);
                   rayOrigin = hitPos + rayDirection * 0.01;
               }
+              // rayDirection.x = 1.2;
               rayDirection = normalize((modelMatrix * vec4(rayDirection, 0.0)).xyz);
               return rayDirection;
           }

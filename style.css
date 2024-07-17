@@ -12,17 +12,3 @@ body {
 body {
   display: flex;
 }
-
-body > div {
-  width: 50%;
-  position: relative;
-}
-
-h2 {
-  position: absolute;
-  left: 50%;
-  translate: -50%;
-  color: #fff;
-  /* color: #120a36; */
-  margin-top: 24px;
-}
