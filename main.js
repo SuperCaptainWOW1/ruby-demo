@@ -330,7 +330,7 @@ function createLighting(scene) {
   scene.add(areaLight3);
   scene.add(areaLight4);
   scene.add(areaLight5);
-  scene.add(areaLight6);
+  // scene.add(areaLight6);
   scene.add(areaLight7);
   scene.add(spotLight1);
   scene.add(pointLight1);
