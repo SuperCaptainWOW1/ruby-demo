@@ -11,4 +11,19 @@ body {
 
 body {
   display: flex;
+  background: linear-gradient(#1f4ca7, #112c79);
+}
+
+.shadow-box {
+  width: 380px;
+  height: 380px;
+  display: inline-block;
+  background: rgb(255, 255, 255, 0.25);
+  border-radius: 50%;
+  filter: blur(45px);
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  translate: -50%;
+  z-index: -1;
 }

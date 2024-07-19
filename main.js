@@ -27,13 +27,15 @@ async function startShaderDemo() {
   );
 
   camera.position.z = 9;
-  camera.position.y = 2.8;
+  camera.position.y = 1.5;
+  camera.position.x = 2;
 
-  const renderer = new THREE.WebGLRenderer();
+  const renderer = new THREE.WebGLRenderer({ alpha: true });
 
   // renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // renderer.toneMappingExposure = 1.25;
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0); // the default
   document.querySelector("#shader").appendChild(renderer.domElement);
 
   // Load the environment map
@@ -59,16 +61,15 @@ async function startShaderDemo() {
   ]);
   environment.encoding = THREE.sRGBEncoding;
 
-  const gui = new dat.GUI({ name: "My GUI" });
-  const params = { color: "#7a8ece" };
-  var update = function () {
-    scene.background = new THREE.Color(params.color);
-  };
+  // const gui = new dat.GUI({ name: "My GUI" });
+  // const params = { color: "#7a8ece" };
+  // var update = function () {
+  //   scene.background = new THREE.Color(params.color);
+  // };
 
-  gui.addColor(params, "color").onChange(update);
+  // gui.addColor(params, "color").onChange(update);
 
-  scene.background = new THREE.Color("#7a8ece");
-  scene.bac;
+  // scene.background = new THREE.Color("#7a8ece");
 
   createLighting(scene);
 
@@ -91,22 +92,21 @@ async function startShaderDemo() {
 
   diamond.traverse((obj) => {
     obj.position.set(0, 0, 0);
-    console.log(obj);
-    if (obj instanceof THREE.Mesh && obj.name.includes("Plane")) {
-      obj.material = new THREE.MeshPhysicalMaterial({
-        transparent: true,
-        ior: 3,
-        transmission: 0.8,
-        color: "#251138",
-        // // thickness: 0.02,
-        opacity: 0.7,
-        roughness: 0,
-        envMap: environment,
-      });
-    } else if (obj.name.includes("Stroke")) {
+    // if (obj instanceof THREE.Mesh && obj.name.includes("Plane")) {
+    //   obj.material = new THREE.MeshPhysicalMaterial({
+    //     transparent: true,
+    //     ior: 3,
+    //     transmission: 0.1,
+    //     color: "#0e0928",
+    //     opacity: 0.8,
+    //     roughness: 0.1,
+    //     envMap: environment,
+    //   });
+    // } else
+    if (obj instanceof THREE.Mesh && obj.name.includes("Stroke")) {
       const diamondStroke = makeDiamond(obj.geometry, scene, camera, {
         environment,
-        color: new THREE.Color(1.2, 1.2, 1.2),
+        color: new THREE.Color(1.3, 1.3, 1.3),
       });
       diamondStroke.material.side = THREE.DoubleSide;
 
@@ -121,7 +121,7 @@ async function startShaderDemo() {
         color: "#1e0f26",
         thickness: 0.02,
         opacity: 0.1,
-        roughness: 0.4,
+        roughness: 0.5,
         // envMap: environment,
         // side: THREE.DoubleSide,
       });
@@ -129,6 +129,16 @@ async function startShaderDemo() {
       reflectiveStroke.scale.set(1.01, 1.01, 1.01);
 
       obj.add(reflectiveStroke);
+    } else if (obj.name.includes("Pipka")) {
+      obj.material = new THREE.MeshPhysicalMaterial({
+        transparent: true,
+        ior: 3,
+        transmission: 0.1,
+        color: "#fff",
+        opacity: 1,
+        roughness: 0.1,
+        envMap: environment,
+      });
     }
   });
 
@@ -162,6 +172,10 @@ async function startShaderDemo() {
   composer.addPass(effectPass);
   // composer.addPass(new ShaderPass(GammaCorrectionShader));
   composer.addPass(smaaPass);
+
+  const outputPass = new OutputPass();
+  composer.addPass(outputPass);
+
   // const effectController = {
   //   bounces: 3.0,
   //   ior: 2.4,
@@ -178,11 +192,11 @@ async function startShaderDemo() {
     controls.update();
     // diamond.rotation.y += 1 * clock.getDelta();
     animationMixer.update(clock.getDelta());
-    renderer.setRenderTarget(defaultTexture);
+    // renderer.setRenderTarget(defaultTexture);
 
     renderer.render(scene, camera);
-    effectPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
-    composer.render();
+    // effectPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
+    // composer.render();
   }
   renderer.setAnimationLoop(animate);
 
@@ -193,79 +207,7 @@ async function startShaderDemo() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 }
-
-async function startSimpleMaterialDemo() {
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
-
-  camera.position.z = 9;
-  camera.position.y = 4;
-
-  const renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.querySelector("#material").appendChild(renderer.domElement);
-
-  // Load the environment map
-  const pmremGenerator = new THREE.PMREMGenerator(renderer);
-  const rgbeLoader = new RGBELoader();
-
-  const envTexture = await rgbeLoader.loadAsync("/env2.hdr");
-  const envMap = pmremGenerator.fromEquirectangular(envTexture);
-  scene.environment = envMap.texture;
-  scene.background = new THREE.Color("#303030");
-
-  envTexture.dispose();
-  pmremGenerator.dispose();
-
-  createLighting(scene);
-
-  const loader = new GLTFLoader();
-  const diamondGeometry = (await loader.loadAsync("./rubin.glb")).scene
-    .children[0].geometry;
-  diamondGeometry.translate(0, 5, 0);
-
-  const diamond = new THREE.Mesh(
-    diamondGeometry,
-    new THREE.MeshPhysicalMaterial({
-      transparent: true,
-      ior: 2.4,
-      transmission: 0.1,
-      color: 0x221367,
-      thickness: 0.02,
-      opacity: 0.9,
-      roughness: 0,
-      // envMap,
-    })
-  );
-  diamond.rotation.x = degToRad(22);
-  scene.add(diamond);
-
-  const clock = new THREE.Clock();
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-
-  function animate() {
-    controls.update();
-    diamond.rotation.y += 1 * clock.getDelta();
-    renderer.render(scene, camera);
-  }
-  renderer.setAnimationLoop(animate);
-
-  window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-}
-
 startShaderDemo();
-// startSimpleMaterialDemo();
 
 function createLighting(scene) {
   const areaLight1 = new THREE.RectAreaLight("#fff", 120);
@@ -309,7 +251,7 @@ function createLighting(scene) {
   spotLight1.position.set(1.5, -10.366, -0.3);
   spotLight1.rotation.set(degToRad(-5.41), degToRad(1.667), degToRad(148.37));
 
-  const pointLight1 = new THREE.PointLight("#fff", 5000);
+  const pointLight1 = new THREE.PointLight("#fff", 1000);
   pointLight1.position.set(-5.5, 0.7, -1);
   // pointLight1.add(
   //   new THREE.Mesh(
@@ -328,7 +270,7 @@ function createLighting(scene) {
   // );
 
   const pointLight3 = new THREE.SpotLight("#fff", 200);
-  const helper = new THREE.SpotLightHelper(pointLight3);
+  // const helper = new THREE.SpotLightHelper(pointLight3);
   // scene.add(helper);
   pointLight3.position.set(0, -4.5, -0.89);
   // pointLight3.lookAt(0, 0, 0);
@@ -357,7 +299,19 @@ function createLighting(scene) {
   //     new THREE.SphereGeometry(0.1),
   //     new THREE.MeshBasicMaterial({ color: "yellow" })
   //   )
+  // )
+
+  const directionalLight1 = new THREE.PointLight("#ffffff", 1000);
+  directionalLight1.lookAt(0, -3, 0);
+  directionalLight1.position.set(0, -4, 0);
+
+  // pointLight5.lookAt(0, 0, 0);
+  // const helper = new THREE.Mesh(
+  //   new THREE.SphereGeometry(0.1),
+  //   new THREE.MeshBasicMaterial({ color: "yellow" })
   // );
+  // helper.position.y = -3;
+  // scene.add(helper);
 
   scene.add(areaLight1);
   scene.add(areaLight2);
@@ -372,4 +326,5 @@ function createLighting(scene) {
   scene.add(pointLight3);
   scene.add(pointLight4);
   scene.add(pointLight5);
+  // scene.add(directionalLight1);
 }
