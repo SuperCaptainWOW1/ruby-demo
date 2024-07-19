@@ -1,6 +1,8 @@
 import "./style.css";
 
 import * as THREE from "three";
+import * as dat from "dat.gui";
+
 import {
   EffectComposer,
   GLTFLoader,
@@ -9,6 +11,7 @@ import {
   ShaderPass,
   SMAAPass,
   EXRLoader,
+  OutputPass,
 } from "three/examples/jsm/Addons.js";
 import { degToRad } from "three/src/math/MathUtils.js";
 import { makeDiamond } from "./diamond.js";
@@ -55,7 +58,17 @@ async function startShaderDemo() {
     "skybox/Box_Back.png",
   ]);
   environment.encoding = THREE.sRGBEncoding;
-  scene.background = new THREE.Color("#606060");
+
+  const gui = new dat.GUI({ name: "My GUI" });
+  const params = { color: "#7a8ece" };
+  var update = function () {
+    scene.background = new THREE.Color(params.color);
+  };
+
+  gui.addColor(params, "color").onChange(update);
+
+  scene.background = new THREE.Color("#7a8ece");
+  scene.bac;
 
   createLighting(scene);
 
