@@ -31,25 +31,8 @@ async function startShaderDemo() {
   camera.position.x = 2;
 
   const renderer = new THREE.WebGLRenderer({ alpha: true });
-
-  // renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // renderer.toneMappingExposure = 1.25;
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x000000, 0); // the default
   document.querySelector("#shader").appendChild(renderer.domElement);
-
-  // Load the environment map
-  // const pmremGenerator = new THREE.PMREMGenerator(renderer);
-  // const rgbeLoader = new RGBELoader();
-
-  // const envTexture = await rgbeLoader.loadAsync("/env.hdr");
-  // const envMap = pmremGenerator.fromEquirectangular(envTexture);
-  // console.log(envMap);
-  // scene.environment = envMap.texture;
-  // scene.background = new THREE.Color("#212121");
-
-  // envTexture.dispose();
-  // pmremGenerator.dispose();
 
   const environment = await new THREE.CubeTextureLoader().loadAsync([
     "skybox/Box_Right.png",
@@ -60,16 +43,6 @@ async function startShaderDemo() {
     "skybox/Box_Back.png",
   ]);
   environment.encoding = THREE.sRGBEncoding;
-
-  // const gui = new dat.GUI({ name: "My GUI" });
-  // const params = { color: "#7a8ece" };
-  // var update = function () {
-  //   scene.background = new THREE.Color(params.color);
-  // };
-
-  // gui.addColor(params, "color").onChange(update);
-
-  // scene.background = new THREE.Color("#7a8ece");
 
   createLighting(scene);
 
@@ -119,7 +92,6 @@ async function startShaderDemo() {
         // ior: 2.4,
         transmission: 0.85,
         color: "#1e0f26",
-        thickness: 0.02,
         opacity: 0.1,
         roughness: 0.5,
         // envMap: environment,
@@ -128,17 +100,34 @@ async function startShaderDemo() {
       reflectiveStroke.position.set(0, 0, 0);
       reflectiveStroke.scale.set(1.01, 1.01, 1.01);
 
+      const gui = new dat.GUI({ name: "My GUI" });
+
+      const params = {
+        color: "#1e0f26",
+        opacity: 0.1,
+        roughness: 0.5,
+      };
+
+      gui
+        .addColor(params, "color")
+        .listen()
+        .onChange((value) => {
+          reflectiveStroke.material.color.setHex(value.replace("#", "0x"));
+        });
+      gui
+        .add(params, "opacity")
+        .min(0)
+        .max(1)
+        .listen()
+        .onChange((value) => (reflectiveStroke.material.opacity = value));
+      gui
+        .add(params, "roughness")
+        .min(0)
+        .max(1)
+        .listen()
+        .onChange((value) => (reflectiveStroke.material.roughness = value));
+
       obj.add(reflectiveStroke);
-    } else if (obj.name.includes("Pipka")) {
-      obj.material = new THREE.MeshPhysicalMaterial({
-        transparent: true,
-        ior: 3,
-        transmission: 0.1,
-        color: "#fff",
-        opacity: 1,
-        roughness: 0.1,
-        envMap: environment,
-      });
     }
   });
 
