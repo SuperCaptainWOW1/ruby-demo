@@ -7,10 +7,8 @@ import {
   EffectComposer,
   GLTFLoader,
   OrbitControls,
-  RGBELoader,
   ShaderPass,
   SMAAPass,
-  EXRLoader,
   OutputPass,
 } from "three/examples/jsm/Addons.js";
 import { degToRad } from "three/src/math/MathUtils.js";
@@ -52,92 +50,76 @@ async function startShaderDemo() {
   });
   const cubeCamera = new THREE.CubeCamera(1, 100000, cubeRenderTarget);
   scene.add(cubeCamera);
-  cubeCamera.position.set(0, 5, 0);
   cubeCamera.update(renderer, scene);
 
+  // Load the modal
   const loader = new GLTFLoader();
 
   const loadedResult = await loader.loadAsync("./rubin.glb");
-  const diamond = loadedResult.scene;
+  const model = loadedResult.scene.children[0];
 
-  const animationMixer = new THREE.AnimationMixer(diamond);
-  const clips = loadedResult.animations;
-
-  diamond.traverse((obj) => {
+  model.traverse((obj) => {
     obj.position.set(0, 0, 0);
-    // if (obj instanceof THREE.Mesh && obj.name.includes("Plane")) {
-    //   obj.material = new THREE.MeshPhysicalMaterial({
-    //     transparent: true,
-    //     ior: 3,
-    //     transmission: 0.1,
-    //     color: "#0e0928",
-    //     opacity: 0.8,
-    //     roughness: 0.1,
-    //     envMap: environment,
-    //   });
-    // } else
-    if (obj instanceof THREE.Mesh && obj.name.includes("Stroke")) {
-      const diamondStroke = makeDiamond(obj.geometry, scene, camera, {
-        environment,
-        color: new THREE.Color(1.3, 1.3, 1.3),
-      });
-      diamondStroke.material.side = THREE.DoubleSide;
-
-      obj.geometry = diamondStroke.geometry;
-      obj.material = diamondStroke.material;
-
-      const reflectiveStroke = diamondStroke.clone();
-      reflectiveStroke.material = new THREE.MeshPhysicalMaterial({
-        transparent: true,
-        // ior: 2.4,
-        transmission: 0.85,
-        color: "#1e0f26",
-        opacity: 0.03,
-        roughness: 0.25,
-        // envMap: environment,
-        // side: THREE.DoubleSide,
-      });
-      reflectiveStroke.position.set(0, 0, 0);
-      reflectiveStroke.scale.set(1.01, 1.01, 1.01);
-
-      const gui = new dat.GUI({ name: "My GUI" });
-
-      const params = {
-        color: "#1e0f26",
-        opacity: 0.03,
-        roughness: 0.25,
-      };
-
-      gui
-        .addColor(params, "color")
-        .listen()
-        .onChange((value) => {
-          reflectiveStroke.material.color.setHex(value.replace("#", "0x"));
-        });
-      gui
-        .add(params, "opacity")
-        .min(0)
-        .max(1)
-        .listen()
-        .onChange((value) => (reflectiveStroke.material.opacity = value));
-      gui
-        .add(params, "roughness")
-        .min(0)
-        .max(1)
-        .listen()
-        .onChange((value) => (reflectiveStroke.material.roughness = value));
-
-      obj.add(reflectiveStroke);
-    }
   });
 
-  // diamond.rotation.x = degToRad(18);
-  diamond.position.set(0, 0, 0);
-  scene.add(diamond);
-  camera.lookAt(diamond.position);
+  scene.add(model);
+
+  // Create the diamond material
+  const diamond = makeDiamond(model.geometry, scene, camera, {
+    environment,
+    color: new THREE.Color(1.3, 1.3, 1.3),
+  });
+  diamond.material.side = THREE.DoubleSide;
+
+  model.geometry = diamond.geometry;
+  model.material = diamond.material;
+
+  const reflectiveWrapper = diamond.clone();
+  reflectiveWrapper.material = new THREE.MeshPhysicalMaterial({
+    transparent: true,
+    transmission: 0.85,
+    color: "#1e0f26",
+    opacity: 0.03,
+    roughness: 0.25,
+  });
+  reflectiveWrapper.position.set(0, 0, 0);
+  reflectiveWrapper.scale.set(1.01, 1.01, 1.01);
+
+  model.add(reflectiveWrapper);
+
+  // const gui = new dat.GUI({ name: "My GUI" });
+
+  // const params = {
+  //   color: "#1e0f26",
+  //   opacity: 0.03,
+  //   roughness: 0.25,
+  // };
+
+  // gui
+  //   .addColor(params, "color")
+  //   .listen()
+  //   .onChange((value) => {
+  //     reflectiveWrapper.material.color.setHex(value.replace("#", "0x"));
+  //   });
+  // gui
+  //   .add(params, "opacity")
+  //   .min(0)
+  //   .max(1)
+  //   .listen()
+  //   .onChange((value) => (reflectiveWrapper.material.opacity = value));
+  // gui
+  //   .add(params, "roughness")
+  //   .min(0)
+  //   .max(1)
+  //   .listen()
+  //   .onChange((value) => (reflectiveWrapper.material.roughness = value));
+
+  // Find and play animations
+  const animationMixer = new THREE.AnimationMixer(model);
+  const clips = loadedResult.animations;
 
   clips.forEach((clip) => {
-    const action = animationMixer.clipAction(clip, diamond);
+    const action = animationMixer.clipAction(clip, model);
     action.play();
   });
 
@@ -154,24 +136,16 @@ async function startShaderDemo() {
     window.innerHeight,
     THREE.FloatType
   );
+
   // Post Effects
   const composer = new EffectComposer(renderer);
   const smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
   const effectPass = new ShaderPass(EffectShader);
   composer.addPass(effectPass);
-  // composer.addPass(new ShaderPass(GammaCorrectionShader));
   composer.addPass(smaaPass);
 
   const outputPass = new OutputPass();
   composer.addPass(outputPass);
-
-  // const effectController = {
-  //   bounces: 3.0,
-  //   ior: 2.4,
-  //   correctMips: true,
-  //   chromaticAberration: true,
-  //   aberrationStrength: 0.01,
-  // };
 
   const clock = new THREE.Clock();
 
@@ -179,7 +153,6 @@ async function startShaderDemo() {
 
   function animate() {
     controls.update();
-    // diamond.rotation.y += 1 * clock.getDelta();
     animationMixer.update(clock.getDelta());
     // renderer.setRenderTarget(defaultTexture);
 
@@ -200,7 +173,6 @@ startShaderDemo();
 
 function createLighting(scene) {
   const areaLight1 = new THREE.RectAreaLight("#fff", 120);
-  // Blender - zxy - перенести потом последнюю координату вперед просто
   areaLight1.position.set(0.097, 9.2, -4.7);
   areaLight1.rotation.set(degToRad(-392), degToRad(10.2), degToRad(-4.36));
 
@@ -242,65 +214,23 @@ function createLighting(scene) {
 
   const pointLight1 = new THREE.PointLight("#fff", 1000);
   pointLight1.position.set(-5.5, 0.7, -1);
-  // pointLight1.add(
-  //   new THREE.Mesh(
-  //     new THREE.SphereGeometry(0.1),
-  //     new THREE.MeshBasicMaterial({ color: 0xff0040 })
-  //   )
-  // );
 
   const pointLight2 = new THREE.PointLight("#F5CCFF", 100);
   pointLight2.position.set(4.5, 1, -4);
-  // pointLight2.add(
-  //   new THREE.Mesh(
-  //     new THREE.SphereGeometry(0.1),
-  //     new THREE.MeshBasicMaterial({ color: "blue" })
-  //   )
-  // );
 
   const pointLight3 = new THREE.SpotLight("#fff", 200);
-  // const helper = new THREE.SpotLightHelper(pointLight3);
-  // scene.add(helper);
   pointLight3.position.set(0, -4.5, -0.89);
-  // pointLight3.lookAt(0, 0, 0);
-  // // pointLight3.add(
-  // //   new THREE.Mesh(
-  // //     new THREE.SphereGeometry(0.1),
-  // //     new THREE.MeshBasicMaterial({ color: "lightgreen" })
-  // //   )
-  // // );
 
   const pointLight4 = new THREE.DirectionalLight("#F5CCFF", 10);
   pointLight4.position.set(0, -5, 0);
   pointLight4.lookAt(0, 0, 0);
-  // pointLight4.add(
-  //   new THREE.Mesh(
-  //     new THREE.SphereGeometry(0.1),
-  //     new THREE.MeshBasicMaterial({ color: "yellow" })
-  //   )
-  // );
 
   const pointLight5 = new THREE.PointLight("#ffffff", 800);
   pointLight5.position.set(3, 2, 0.5);
-  // pointLight5.lookAt(0, 0, 0);
-  // pointLight5.add(
-  //   new THREE.Mesh(
-  //     new THREE.SphereGeometry(0.1),
-  //     new THREE.MeshBasicMaterial({ color: "yellow" })
-  //   )
-  // )
 
   const directionalLight1 = new THREE.PointLight("#ffffff", 1000);
   directionalLight1.lookAt(0, -3, 0);
   directionalLight1.position.set(0, -4, 0);
-
-  // pointLight5.lookAt(0, 0, 0);
-  // const helper = new THREE.Mesh(
-  //   new THREE.SphereGeometry(0.1),
-  //   new THREE.MeshBasicMaterial({ color: "yellow" })
-  // );
-  // helper.position.y = -3;
-  // scene.add(helper);
 
   scene.add(areaLight1);
   scene.add(areaLight2);
