@@ -92,8 +92,8 @@ async function startShaderDemo() {
         // ior: 2.4,
         transmission: 0.85,
         color: "#1e0f26",
-        opacity: 0.1,
-        roughness: 0.5,
+        opacity: 0.03,
+        roughness: 0.25,
         // envMap: environment,
         // side: THREE.DoubleSide,
       });
@@ -104,8 +104,8 @@ async function startShaderDemo() {
 
       const params = {
         color: "#1e0f26",
-        opacity: 0.1,
-        roughness: 0.5,
+        opacity: 0.03,
+        roughness: 0.25,
       };
 
       gui
