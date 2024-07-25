@@ -15,7 +15,9 @@ import { degToRad } from "three/src/math/MathUtils.js";
 import { makeDiamond } from "./diamond.js";
 import { EffectShader } from "./EffectShader.js";
 
-async function startShaderDemo() {
+const container = document.querySelector("#app");
+
+async function startApp() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     65,
@@ -30,7 +32,7 @@ async function startShaderDemo() {
 
   const renderer = new THREE.WebGLRenderer({ alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.querySelector("#shader").appendChild(renderer.domElement);
+  container.appendChild(renderer.domElement);
 
   const environment = await new THREE.CubeTextureLoader().loadAsync([
     "skybox/Box_Right.png",
@@ -43,6 +45,7 @@ async function startShaderDemo() {
   environment.encoding = THREE.sRGBEncoding;
 
   createLighting(scene);
+  createStarAnimation(scene);
 
   const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
     generateMipmaps: true,
@@ -120,7 +123,7 @@ async function startShaderDemo() {
 
   clips.forEach((clip) => {
     const action = animationMixer.clipAction(clip, model);
-    action.play();
+    // action.play();
   });
 
   const defaultTexture = new THREE.WebGLRenderTarget(
@@ -169,7 +172,67 @@ async function startShaderDemo() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 }
-startShaderDemo();
+startApp();
+
+async function createStarAnimation(scene) {
+  const particleGeometry = new THREE.BufferGeometry();
+  const count = 500;
+
+  const positions = new Float32Array(count * 3);
+
+  for (let i = 0; i < count * 3; i++) {
+    positions[i] = (Math.random() - 0.5) * 10;
+  }
+
+  particleGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(positions, 3)
+  );
+
+  const starTexture = await new THREE.TextureLoader().loadAsync(
+    "/stars_separate/star_05.svg"
+  );
+
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.1,
+    sizeAttenuation: true,
+    map: starTexture,
+    transparent: true,
+    // alphaTest: 0.001,
+    // depthTest: false,
+  });
+
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  scene.add(particles);
+
+  // const engine = new ParticleEngine();
+  // engine.setValues({
+  //   positionStyle: Type.CUBE,
+  //   positionBase: new THREE.Vector3(0, 5, 0),
+  //   positionSpread: new THREE.Vector3(10, 0, 10),
+  //   velocityStyle: Type.CUBE,
+  //   velocityBase: new THREE.Vector3(0, 160, 0),
+  //   velocitySpread: new THREE.Vector3(100, 20, 100),
+  //   accelerationBase: new THREE.Vector3(0, -100, 0),
+  //   particleTexture: new THREE.TextureLoader().loadAsync(
+  //     "stars_separate/star_01.svg"
+  //   ),
+  //   angleBase: 0,
+  //   angleSpread: 180,
+  //   angleVelocityBase: 0,
+  //   angleVelocitySpread: 360 * 4,
+  //   sizeTween: new Tween([0, 1], [1, 20]),
+  //   opacityTween: new Tween([2, 3], [1, 0]),
+  //   colorTween: new Tween(
+  //     [0.5, 2],
+  //     [new THREE.Vector3(0, 1, 0.5), new THREE.Vector3(0.8, 1, 0.5)]
+  //   ),
+  //   particlesPerSecond: 200,
+  //   particleDeathAge: 3.0,
+  //   emitterDeathAge: 60,
+  // });
+  // engine.initialize();
+}
 
 function createLighting(scene) {
   const areaLight1 = new THREE.RectAreaLight("#fff", 120);
