@@ -128,6 +128,58 @@ async function startShaderDemo() {
         .onChange((value) => (reflectiveStroke.material.roughness = value));
 
       obj.add(reflectiveStroke);
+
+      async function changeEnvMap({
+        right = "skybox/Box_Right.png",
+        left = "skybox/Box_Left.png",
+        top = "skybox/Box_Top.png",
+        bottom = "skybox/Box_Bottom.png",
+        front = "skybox/Box_Front.png",
+        back = "skybox/Box_Back.png",
+      }) {
+        console.log(right);
+        diamondStroke.material.uniforms.envMap.value =
+          await new THREE.CubeTextureLoader().loadAsync([
+            right,
+            left,
+            top,
+            bottom,
+            front,
+            back,
+          ]);
+        diamondStroke.material.needsUpdate = true;
+      }
+
+      document
+        .querySelector("input.env-right")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ right: URL.createObjectURL(e.target.files[0]) });
+        });
+      document
+        .querySelector("input.env-left")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ left: URL.createObjectURL(e.target.files[0]) });
+        });
+      document
+        .querySelector("input.env-top")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ top: URL.createObjectURL(e.target.files[0]) });
+        });
+      document
+        .querySelector("input.env-bottom")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ bottom: URL.createObjectURL(e.target.files[0]) });
+        });
+      document
+        .querySelector("input.env-front")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ front: URL.createObjectURL(e.target.files[0]) });
+        });
+      document
+        .querySelector("input.env-back")
+        .addEventListener("change", (e) => {
+          changeEnvMap({ back: URL.createObjectURL(e.target.files[0]) });
+        });
     }
   });
 
