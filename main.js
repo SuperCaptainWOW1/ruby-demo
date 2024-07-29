@@ -45,7 +45,7 @@ async function startApp() {
   environment.encoding = THREE.sRGBEncoding;
 
   createLighting(scene);
-  createStarAnimation(scene);
+  // createStarAnimation(scene);
 
   const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
     generateMipmaps: true,
