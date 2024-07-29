@@ -16,6 +16,7 @@ import { makeDiamond } from "./diamond.js";
 import { EffectShader } from "./EffectShader.js";
 
 const container = document.querySelector("#app");
+const count = 100;
 
 async function startApp() {
   const scene = new THREE.Scene();
@@ -45,7 +46,7 @@ async function startApp() {
   environment.encoding = THREE.sRGBEncoding;
 
   createLighting(scene);
-  createStarAnimation(scene);
+  const particles = await createStarAnimation(scene, camera);
 
   const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
     generateMipmaps: true,
@@ -154,12 +155,72 @@ async function startApp() {
 
   const controls = new OrbitControls(camera, renderer.domElement);
 
+  let previousElapsedTime = clock.getElapsedTime();
+
+  const inititalPositions = [...particles.geometry.attributes.position.array];
+
   function animate() {
     controls.update();
     animationMixer.update(clock.getDelta());
     // renderer.setRenderTarget(defaultTexture);
 
+    const elapsedTime = clock.getElapsedTime();
+    const deltaTime = elapsedTime - previousElapsedTime;
+
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+
+      // const x = particles.geometry.attributes.position.array[i3];
+      // particles.geometry.attributes.position.array[i3] += Math.sin(
+      //   x + elapsedTime
+      // );
+      // particles.geometry.attributes.position.array[i3 + 1] += 0.2 * deltaTime;
+
+      if (
+        particles.geometry.attributes.position.array[i3] > 0 &&
+        particles.geometry.attributes.position.array[i3] <= 2.5
+      ) {
+        particles.geometry.attributes.alpha.array[i] =
+          particles.geometry.attributes.position.array[i3] / 2.5;
+      } else if (particles.geometry.attributes.position.array[i3] > 2.5) {
+        particles.geometry.attributes.alpha.array[i] = 1;
+      }
+
+      if (
+        particles.geometry.attributes.position.array[i3] > 2.5 &&
+        particles.geometry.attributes.position.array[i3] <= 5
+      ) {
+        particles.geometry.attributes.alpha.array[i] =
+          2.5 / particles.geometry.attributes.position.array[i3];
+      }
+
+      if (particles.geometry.attributes.position.array[i3] > 5) {
+        particles.geometry.attributes.position.array[i3] =
+          inititalPositions[i3];
+        particles.geometry.attributes.position.array[i3 + 1] =
+          inititalPositions[i3 + 1];
+        particles.geometry.attributes.position.array[i3] =
+          inititalPositions[i3];
+        particles.geometry.attributes.position.array[i3 + 2] =
+          inititalPositions[i3 + 2];
+      } else {
+        particles.geometry.attributes.position.array[i3] += deltaTime * 1;
+        particles.geometry.attributes.position.array[i3 + 1] += deltaTime * 0.3;
+      }
+
+      // dynamically change alphas
+      // particles.geometry.attributes.alpha.array[i] *= 0.99;
+
+      // if (particles.geometry.attributes.alpha.array[i] < 0.01) {
+      //   particles.geometry.attributes.alpha.array[i] = 1.0;
+      // }
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+    particles.geometry.attributes.alpha.needsUpdate = true;
+
     renderer.render(scene, camera);
+
+    previousElapsedTime = elapsedTime;
     // effectPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
     // composer.render();
   }
@@ -174,14 +235,20 @@ async function startApp() {
 }
 startApp();
 
-async function createStarAnimation(scene) {
+async function createStarAnimation(scene, camera) {
   const particleGeometry = new THREE.BufferGeometry();
-  const count = 500;
 
   const positions = new Float32Array(count * 3);
+  const alphas = new Float32Array(count * 1); // 1 values per vertex
 
   for (let i = 0; i < count * 3; i++) {
-    positions[i] = (Math.random() - 0.5) * 10;
+    const i3 = i * 3;
+
+    positions[i3] = Math.random() * 2.5; // x
+    positions[i3 + 1] = Math.random() * 1.5; // y
+    positions[i3 + 2] = Math.random() * 0.2; // z
+
+    alphas[i] = 1;
   }
 
   particleGeometry.setAttribute(
@@ -189,49 +256,55 @@ async function createStarAnimation(scene) {
     new THREE.BufferAttribute(positions, 3)
   );
 
+  particleGeometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
+
   const starTexture = await new THREE.TextureLoader().loadAsync(
     "/stars_separate/star_05.svg"
   );
 
-  const particleMaterial = new THREE.PointsMaterial({
-    size: 0.1,
-    sizeAttenuation: true,
+  const particleMaterial = new THREE.ShaderMaterial({
+    // size: 0.2,
+    // sizeAttenuation: true,
     map: starTexture,
-    transparent: true,
+    // transparent: true,
+    // opacity,
     // alphaTest: 0.001,
     // depthTest: false,
+
+    // uniforms:       uniforms,
+    vertexShader: `
+    attribute float alpha;
+
+    varying float vAlpha;
+
+    void main() {
+
+        vAlpha = alpha;
+
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+        gl_PointSize = 8.0;
+
+        gl_Position = projectionMatrix * mvPosition;
+
+    }`,
+    fragmentShader: ` uniform vec3 color;
+
+    varying float vAlpha;
+
+    void main() {
+
+        gl_FragColor = vec4( color, vAlpha );
+
+    }`,
+    transparent: true,
   });
 
   const particles = new THREE.Points(particleGeometry, particleMaterial);
+  particles.lookAt(camera.position);
   scene.add(particles);
 
-  // const engine = new ParticleEngine();
-  // engine.setValues({
-  //   positionStyle: Type.CUBE,
-  //   positionBase: new THREE.Vector3(0, 5, 0),
-  //   positionSpread: new THREE.Vector3(10, 0, 10),
-  //   velocityStyle: Type.CUBE,
-  //   velocityBase: new THREE.Vector3(0, 160, 0),
-  //   velocitySpread: new THREE.Vector3(100, 20, 100),
-  //   accelerationBase: new THREE.Vector3(0, -100, 0),
-  //   particleTexture: new THREE.TextureLoader().loadAsync(
-  //     "stars_separate/star_01.svg"
-  //   ),
-  //   angleBase: 0,
-  //   angleSpread: 180,
-  //   angleVelocityBase: 0,
-  //   angleVelocitySpread: 360 * 4,
-  //   sizeTween: new Tween([0, 1], [1, 20]),
-  //   opacityTween: new Tween([2, 3], [1, 0]),
-  //   colorTween: new Tween(
-  //     [0.5, 2],
-  //     [new THREE.Vector3(0, 1, 0.5), new THREE.Vector3(0.8, 1, 0.5)]
-  //   ),
-  //   particlesPerSecond: 200,
-  //   particleDeathAge: 3.0,
-  //   emitterDeathAge: 60,
-  // });
-  // engine.initialize();
+  return particles;
 }
 
 function createLighting(scene) {
