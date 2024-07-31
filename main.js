@@ -230,7 +230,11 @@ async function startShaderDemo() {
 
   const controls = new OrbitControls(camera, renderer.domElement);
 
+  const stats = new Stats();
+  document.body.appendChild(stats.dom);
+
   function animate() {
+    stats.begin();
     controls.update();
     // diamond.rotation.y += 1 * clock.getDelta();
     animationMixer.update(clock.getDelta());
@@ -239,6 +243,7 @@ async function startShaderDemo() {
     renderer.render(scene, camera);
     // effectPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
     // composer.render();
+    stats.end();
   }
   renderer.setAnimationLoop(animate);
 
