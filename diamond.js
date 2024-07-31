@@ -56,6 +56,9 @@ export const makeDiamond = (
           value: new THREE.Vector2(window.innerWidth, window.innerHeight),
         },
       },
+      defines: {
+        FAST_CHROMA: "",
+      },
       vertexShader: /*glsl*/ `
           varying vec3 vWorldPosition;
           varying vec3 vNormal;
@@ -94,23 +97,21 @@ export const makeDiamond = (
               rayOrigin = (modelMatrixInverse * vec4(rayOrigin, 1.0)).xyz;
               rayDirection = normalize((modelMatrixInverse * vec4(rayDirection, 0.0)).xyz);
               for(float i = 0.0; i < bounces; i++) {
-                  uvec4 faceIndices = uvec4( 0u );
-                  vec3 faceNormal = vec3( 0.0, 0.0, 1.0 );
-                  vec3 barycoord = vec3( 0.0 );
-                  float side = 1.0;
-                  float dist = 0.0;
-                  bvhIntersectFirstHit( bvh, rayOrigin, rayDirection, faceIndices, faceNormal, barycoord, side, dist );
-                  vec3 hitPos = rayOrigin + rayDirection * max(dist - 0.001, 0.0);
-                //  faceNormal *= side;
-                  vec3 tempDir = refract(rayDirection, faceNormal, ior);
-                  if (length(tempDir) != 0.0) {
-                      rayDirection = tempDir;
-                      break;
-                  }
-                  rayDirection = reflect(rayDirection, faceNormal);
-                  rayOrigin = hitPos + rayDirection * 0.01;
+                uvec4 faceIndices = uvec4( 0u );
+                vec3 faceNormal = vec3( 0.0, 0.0, 1.0 );
+                vec3 barycoord = vec3( 0.0 );
+                float side = 1.0;
+                float dist = 0.0;
+                bvhIntersectFirstHit( bvh, rayOrigin, rayDirection, faceIndices, faceNormal, barycoord, side, dist );
+                vec3 hitPos = rayOrigin + rayDirection * max(dist - 0.001, 0.0);
+                vec3 tempDir = refract(rayDirection, faceNormal, ior);
+                if (length(tempDir) != 0.0) {
+                  rayDirection = tempDir;
+                  break;
+                }
+                rayDirection = reflect(rayDirection, faceNormal);
+                rayOrigin = hitPos + rayDirection * 0.01;
               }
-              // rayDirection.x = 1.2;
               rayDirection = normalize((modelMatrix * vec4(rayDirection, 0.0)).xyz);
               return rayDirection;
           }
@@ -125,13 +126,18 @@ export const makeDiamond = (
               vec3 rayDirection = normalize(vWorldPosition - cameraPosition);
               vec3 finalColor;
               if (chromaticAberration) {
-              vec3 rayDirectionR = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior * (1.0 - aberrationStrength), 1.0), modelMatrixInverse);
-              vec3 rayDirectionG = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior, 1.0), modelMatrixInverse);
-              vec3 rayDirectionB = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior * (1.0 + aberrationStrength), 1.0), modelMatrixInverse);
-              float finalColorR = textureGrad(envMap, rayDirectionR, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).r;
-              float finalColorG = textureGrad(envMap, rayDirectionG, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).g;
-              float finalColorB = textureGrad(envMap, rayDirectionB, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).b;
-              finalColor = vec3(finalColorR, finalColorG, finalColorB) * color;
+                vec3 rayDirectionG = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior, 1.0), modelMatrixInverse);
+                #ifdef FAST_CHROMA
+                  vec3 rayDirectionR = normalize(rayDirectionG + 1.0 * vec3(aberrationStrength / 2.0));
+                  vec3 rayDirectionB = normalize(rayDirectionG - 1.0 * vec3(aberrationStrength / 2.0));
+                #else
+                  vec3 rayDirectionR = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior * (1.0 - aberrationStrength), 1.0), modelMatrixInverse);
+                  vec3 rayDirectionB = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior * (1.0 + aberrationStrength), 1.0), modelMatrixInverse); 
+                #endif
+                float finalColorR = textureGrad(envMap, rayDirectionR, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).r;
+                float finalColorG = textureGrad(envMap, rayDirectionG, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).g;
+                float finalColorB = textureGrad(envMap, rayDirectionB, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).b;
+                finalColor = vec3(finalColorR, finalColorG, finalColorB) * color;
               } else {
                   rayDirection = totalInternalReflection(rayOrigin, rayDirection, normal, max(ior, 1.0), modelMatrixInverse);
                   finalColor = textureGrad(envMap, rayDirection, dFdx(correctMips ? directionCamPerfect: rayDirection), dFdy(correctMips ? directionCamPerfect: rayDirection)).rgb;

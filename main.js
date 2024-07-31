@@ -16,6 +16,7 @@ import {
 import { degToRad } from "three/src/math/MathUtils.js";
 import { makeDiamond } from "./diamond.js";
 import { EffectShader } from "./EffectShader.js";
+import Stats from "three/examples/jsm/libs/stats.module.js";
 
 async function startShaderDemo() {
   const scene = new THREE.Scene();
