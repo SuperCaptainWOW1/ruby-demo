@@ -16,10 +16,10 @@ import { makeDiamond } from "./diamond.js";
 import { EffectShader } from "./EffectShader.js";
 
 const container = document.querySelector("#app");
-const count = 100;
 
 async function startApp() {
   const scene = new THREE.Scene();
+  window.scene = scene;
   const camera = new THREE.PerspectiveCamera(
     65,
     window.innerWidth / window.innerHeight,
@@ -29,7 +29,7 @@ async function startApp() {
 
   camera.position.z = 9;
   camera.position.y = 1.5;
-  camera.position.x = 2;
+  // camera.position.x = 2;
 
   const renderer = new THREE.WebGLRenderer({ alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -46,7 +46,6 @@ async function startApp() {
   environment.encoding = THREE.sRGBEncoding;
 
   createLighting(scene);
-  const particles = await createStarAnimation(scene, camera);
 
   const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
     generateMipmaps: true,
@@ -157,72 +156,49 @@ async function startApp() {
 
   let previousElapsedTime = clock.getElapsedTime();
 
-  const inititalPositions = [...particles.geometry.attributes.position.array];
+  // right
+  const particles = await createStarParticles(scene, camera);
+  particles.position.set(0.5, -2, 0);
+  particles.rotation.set(0, 0, 0.35);
+
+  const particle2 = await createStarParticles(scene, camera);
+  particle2.position.set(0, -3.7, 0);
+  particle2.rotation.set(0, 0, -0.35);
+
+  const invertedGroup = new THREE.Group();
+
+  // left
+  const particle3 = await createStarParticles(scene, camera);
+  particle3.position.set(0.5, -1, 0);
+  particle3.rotation.set(0, 0, 0.35);
+
+  const particle4 = await createStarParticles(scene, camera);
+  particle4.position.set(0, -2.5, 0);
+  particle4.rotation.set(0, 0, -0.35);
+
+  invertedGroup.add(particle3);
+  invertedGroup.add(particle4);
+  scene.add(invertedGroup);
+
+  invertedGroup.rotation.z = Math.PI;
+  invertedGroup.position.y = -1.7;
 
   function animate() {
     controls.update();
     animationMixer.update(clock.getDelta());
-    // renderer.setRenderTarget(defaultTexture);
 
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - previousElapsedTime;
 
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
+    updateStarAnimaton(particles, deltaTime);
+    updateStarAnimaton(particle2, deltaTime);
 
-      // const x = particles.geometry.attributes.position.array[i3];
-      // particles.geometry.attributes.position.array[i3] += Math.sin(
-      //   x + elapsedTime
-      // );
-      // particles.geometry.attributes.position.array[i3 + 1] += 0.2 * deltaTime;
-
-      if (
-        particles.geometry.attributes.position.array[i3] > 0 &&
-        particles.geometry.attributes.position.array[i3] <= 2.5
-      ) {
-        particles.geometry.attributes.alpha.array[i] =
-          particles.geometry.attributes.position.array[i3] / 2.5;
-      } else if (particles.geometry.attributes.position.array[i3] > 2.5) {
-        particles.geometry.attributes.alpha.array[i] = 1;
-      }
-
-      if (
-        particles.geometry.attributes.position.array[i3] > 2.5 &&
-        particles.geometry.attributes.position.array[i3] <= 5
-      ) {
-        particles.geometry.attributes.alpha.array[i] =
-          2.5 / particles.geometry.attributes.position.array[i3];
-      }
-
-      if (particles.geometry.attributes.position.array[i3] > 5) {
-        particles.geometry.attributes.position.array[i3] =
-          inititalPositions[i3];
-        particles.geometry.attributes.position.array[i3 + 1] =
-          inititalPositions[i3 + 1];
-        particles.geometry.attributes.position.array[i3] =
-          inititalPositions[i3];
-        particles.geometry.attributes.position.array[i3 + 2] =
-          inititalPositions[i3 + 2];
-      } else {
-        particles.geometry.attributes.position.array[i3] += deltaTime * 1;
-        particles.geometry.attributes.position.array[i3 + 1] += deltaTime * 0.3;
-      }
-
-      // dynamically change alphas
-      // particles.geometry.attributes.alpha.array[i] *= 0.99;
-
-      // if (particles.geometry.attributes.alpha.array[i] < 0.01) {
-      //   particles.geometry.attributes.alpha.array[i] = 1.0;
-      // }
-    }
-    particles.geometry.attributes.position.needsUpdate = true;
-    particles.geometry.attributes.alpha.needsUpdate = true;
+    updateStarAnimaton(particle3, deltaTime);
+    updateStarAnimaton(particle4, deltaTime);
 
     renderer.render(scene, camera);
 
     previousElapsedTime = elapsedTime;
-    // effectPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
-    // composer.render();
   }
   renderer.setAnimationLoop(animate);
 
@@ -235,76 +211,148 @@ async function startApp() {
 }
 startApp();
 
-async function createStarAnimation(scene, camera) {
+async function createStarParticles(scene, camera) {
   const particleGeometry = new THREE.BufferGeometry();
+
+  const count = 100;
 
   const positions = new Float32Array(count * 3);
   const alphas = new Float32Array(count * 1); // 1 values per vertex
+  const velocities = new Float32Array(count * 3);
+  const sizes = new Float32Array(count * 1);
 
   for (let i = 0; i < count * 3; i++) {
     const i3 = i * 3;
 
-    positions[i3] = Math.random() * 2.5; // x
-    positions[i3 + 1] = Math.random() * 1.5; // y
-    positions[i3 + 2] = Math.random() * 0.2; // z
+    positions[i3] = Math.random() * 8; // x
+    positions[i3 + 1] = Math.random() * 3; // y
+    positions[i3 + 2] = (Math.random() - 1) * 5; // z
 
-    alphas[i] = 1;
+
+    // Random velocities
+    velocities[i * 3] = (Math.random() - 0.5) * 0.02;
+    velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
+    velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+
   }
+
+  for (let i = 0; i < count; i++) {
+    alphas[i] = 1;
+    sizes[i] = Math.random() * 1;
+  }
+  
 
   particleGeometry.setAttribute(
     "position",
     new THREE.BufferAttribute(positions, 3)
   );
-
-  particleGeometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
-
-  const starTexture = await new THREE.TextureLoader().loadAsync(
-    "/stars_separate/star_05.svg"
+  particleGeometry.setAttribute(
+    "velocity",
+    new THREE.BufferAttribute(velocities, 3)
   );
+  particleGeometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
+  particleGeometry.setAttribute(
+    "aSize",
+    new THREE.BufferAttribute(sizes, 1)
+  );  
+
+  const loader = new THREE.TextureLoader();
+  const starTexture = loader.load("/stars_separate/star_05.svg");
+  starTexture.flipY = false;
 
   const particleMaterial = new THREE.ShaderMaterial({
-    // size: 0.2,
-    // sizeAttenuation: true,
-    map: starTexture,
-    // transparent: true,
-    // opacity,
-    // alphaTest: 0.001,
-    // depthTest: false,
-
-    // uniforms:       uniforms,
-    vertexShader: `
-    attribute float alpha;
-
-    varying float vAlpha;
-
-    void main() {
-
-        vAlpha = alpha;
-
-        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-
-        gl_PointSize = 8.0;
-
-        gl_Position = projectionMatrix * mvPosition;
-
-    }`,
-    fragmentShader: ` uniform vec3 color;
-
-    varying float vAlpha;
-
-    void main() {
-
-        gl_FragColor = vec4( color, vAlpha );
-
-    }`,
     transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTexture: new THREE.Uniform(starTexture),
+    },
+    vertexShader: `
+        attribute float alpha;
+        attribute float aSize;
+
+        varying float vAlpha;
+
+        void main() {
+          vAlpha = alpha;
+
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+
+          gl_PointSize = aSize * (300.0 / -mvPosition.z); // Adjust size based on distance
+          gl_Position = projectionMatrix * mvPosition; // Use mvPosition for correct positioning
+        }`,
+    fragmentShader: `
+        uniform vec3 color;
+        uniform sampler2D uTexture; // Texture uniform
+        
+        varying float vAlpha;
+
+        void main() {
+          vec4 textureColor = texture2D(uTexture, gl_PointCoord);
+
+          gl_FragColor = vec4(textureColor.rgb, textureColor.r * vAlpha);
+        }
+    `,
   });
 
   const particles = new THREE.Points(particleGeometry, particleMaterial);
   particles.lookAt(camera.position);
   scene.add(particles);
 
+  particles.userData.inititalPositions = [
+    ...particles.geometry.attributes.position.array,
+  ];
+
   return particles;
+}
+
+function updateStarAnimaton(particles, deltaTime) {
+  const velocities = particles.geometry.attributes.velocity.array;
+
+  const speed = 1.5;
+
+  for (
+    let i = 0;
+    i < particles.geometry.attributes.position.array.length;
+    i++
+  ) {
+    const i3 = i * 3;
+
+    if (
+      particles.geometry.attributes.position.array[i3] >= 0 &&
+      particles.geometry.attributes.position.array[i3] < 2
+    ) {
+      particles.geometry.attributes.alpha.array[i] =
+        particles.geometry.attributes.position.array[i3] / 2;
+    }
+    
+
+    if (
+      particles.geometry.attributes.position.array[i3] > 6 &&
+      particles.geometry.attributes.position.array[i3] <= 8
+    ) {
+      particles.geometry.attributes.alpha.array[i] =
+        1 - (((particles.geometry.attributes.position.array[i3]) - 6) / 2);
+    }
+
+    if (particles.geometry.attributes.position.array[i3] >= 8) {
+      particles.geometry.attributes.position.array[i3] = 0;
+      particles.geometry.attributes.position.array[i3 + 1] =
+        particles.userData.inititalPositions[i3 + 1];
+      particles.geometry.attributes.position.array[i3 + 2] =
+        particles.userData.inititalPositions[i3 + 2];
+      particles.geometry.attributes.alpha.array[i] = 0;
+    } else {
+      particles.geometry.attributes.position.array[i3] += deltaTime * speed;
+      particles.geometry.attributes.position.array[i3 + 1] +=
+        deltaTime * velocities[i3 + 1] * speed;
+      particles.geometry.attributes.position.array[i3 + 2] +=
+        deltaTime * velocities[i3 + 2] * speed;
+    }
+  }
+  particles.geometry.attributes.position.needsUpdate = true;
+  particles.geometry.attributes.alpha.needsUpdate = true;
+  particles.geometry.attributes.aSize.needsUpdate = true;
 }
 
 function createLighting(scene) {
