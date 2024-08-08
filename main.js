@@ -157,27 +157,47 @@ async function startApp() {
   let previousElapsedTime = clock.getElapsedTime();
 
   // right
-  const particles = await createStarParticles(scene, camera);
-  particles.position.set(0.5, -2, 0);
-  particles.rotation.set(0, 0, 0.35);
+  const particles1 = await createStarParticles(scene, camera);
+  particles1.position.set(0.5, -2, 0);
+  particles1.rotation.set(0, 0, 0.25);
+  const particles1Extra = await createStarParticles(scene, camera, {
+    textureSrc: "/stars_separate/star_05.svg",
+    count: 20
+  });
+  particles1.add(particles1Extra)
 
-  const particle2 = await createStarParticles(scene, camera);
-  particle2.position.set(0, -3.7, 0);
-  particle2.rotation.set(0, 0, -0.35);
+  const particles2 = await createStarParticles(scene, camera);
+  particles2.position.set(0, -3.7, 0);
+  particles2.rotation.set(0, 0, -0.35);
+  const particles2Extra = await createStarParticles(scene, camera, {
+    textureSrc: "/stars_separate/star_05.svg",
+    count: 20
+  });
+  particles2.add(particles2Extra)
 
   const invertedGroup = new THREE.Group();
 
   // left
-  const particle3 = await createStarParticles(scene, camera);
-  particle3.position.set(0.5, -1, 0);
-  particle3.rotation.set(0, 0, 0.35);
+  const particles3 = await createStarParticles(scene, camera);
+  particles3.position.set(0.5, -1, 0);
+  particles3.rotation.set(0, 0, 0.3);
+  const particles3Extra = await createStarParticles(scene, camera, {
+    textureSrc: "/stars_separate/star_05.svg",
+    count: 20
+  });
+  particles3.add(particles3Extra)
 
-  const particle4 = await createStarParticles(scene, camera);
-  particle4.position.set(0, -2.5, 0);
-  particle4.rotation.set(0, 0, -0.35);
+  const particles4 = await createStarParticles(scene, camera);
+  particles4.position.set(0, -2.5, 0);
+  particles4.rotation.set(0, 0, -0.35);
+  const particles4Extra = await createStarParticles(scene, camera, {
+    textureSrc: "/stars_separate/star_05.svg",
+    count: 20
+  });
+  particles4.add(particles4Extra)
 
-  invertedGroup.add(particle3);
-  invertedGroup.add(particle4);
+  invertedGroup.add(particles3);
+  invertedGroup.add(particles4);
   scene.add(invertedGroup);
 
   invertedGroup.rotation.z = Math.PI;
@@ -190,11 +210,17 @@ async function startApp() {
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - previousElapsedTime;
 
-    updateStarAnimaton(particles, deltaTime);
-    updateStarAnimaton(particle2, deltaTime);
+    updateStarAnimaton(particles1, deltaTime);
+    updateStarAnimaton(particles1Extra, deltaTime);
 
-    updateStarAnimaton(particle3, deltaTime);
-    updateStarAnimaton(particle4, deltaTime);
+    updateStarAnimaton(particles2, deltaTime);
+    updateStarAnimaton(particles2Extra, deltaTime);
+
+    updateStarAnimaton(particles3, deltaTime);
+    updateStarAnimaton(particles3Extra, deltaTime);
+
+    updateStarAnimaton(particles4, deltaTime);
+    updateStarAnimaton(particles4Extra, deltaTime);
 
     renderer.render(scene, camera);
 
@@ -211,10 +237,14 @@ async function startApp() {
 }
 startApp();
 
-async function createStarParticles(scene, camera) {
+async function createStarParticles(scene, camera, {
+  textureSrc = "/stars_separate/star_02.svg",
+  count = 80
+} = {
+  textureSrc:  "/stars_separate/star_02.svg",
+  count: 80
+}) {
   const particleGeometry = new THREE.BufferGeometry();
-
-  const count = 100;
 
   const positions = new Float32Array(count * 3);
   const alphas = new Float32Array(count * 1); // 1 values per vertex
@@ -225,22 +255,18 @@ async function createStarParticles(scene, camera) {
     const i3 = i * 3;
 
     positions[i3] = Math.random() * 8; // x
-    positions[i3 + 1] = Math.random() * 3; // y
+    positions[i3 + 1] = Math.random() * 3.5; // y
     positions[i3 + 2] = (Math.random() - 1) * 5; // z
 
-
-    // Random velocities
     velocities[i * 3] = (Math.random() - 0.5) * 0.02;
     velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
     velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
-
   }
 
   for (let i = 0; i < count; i++) {
     alphas[i] = 1;
     sizes[i] = Math.random() * 1;
   }
-  
 
   particleGeometry.setAttribute(
     "position",
@@ -251,21 +277,18 @@ async function createStarParticles(scene, camera) {
     new THREE.BufferAttribute(velocities, 3)
   );
   particleGeometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
-  particleGeometry.setAttribute(
-    "aSize",
-    new THREE.BufferAttribute(sizes, 1)
-  );  
+  particleGeometry.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
 
   const loader = new THREE.TextureLoader();
-  const starTexture = loader.load("/stars_separate/star_05.svg");
-  starTexture.flipY = false;
+  const starTexture1 = loader.load(textureSrc);
+  starTexture1.flipY = false;
 
   const particleMaterial = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     uniforms: {
-      uTexture: new THREE.Uniform(starTexture),
+      uTexture: new THREE.Uniform(starTexture1),
     },
     vertexShader: `
         attribute float alpha;
@@ -283,7 +306,7 @@ async function createStarParticles(scene, camera) {
         }`,
     fragmentShader: `
         uniform vec3 color;
-        uniform sampler2D uTexture; // Texture uniform
+        uniform sampler2D uTexture;
         
         varying float vAlpha;
 
@@ -325,14 +348,13 @@ function updateStarAnimaton(particles, deltaTime) {
       particles.geometry.attributes.alpha.array[i] =
         particles.geometry.attributes.position.array[i3] / 2;
     }
-    
 
     if (
       particles.geometry.attributes.position.array[i3] > 6 &&
       particles.geometry.attributes.position.array[i3] <= 8
     ) {
       particles.geometry.attributes.alpha.array[i] =
-        1 - (((particles.geometry.attributes.position.array[i3]) - 6) / 2);
+        1 - (particles.geometry.attributes.position.array[i3] - 6) / 2;
     }
 
     if (particles.geometry.attributes.position.array[i3] >= 8) {
